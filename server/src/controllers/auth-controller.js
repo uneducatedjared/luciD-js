@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
-import User from '../models/user.model.js'; // 导入 Sequelize 和用户模型
+import User from '../models/user.js'; // 导入 Sequelize 和用户模型
 
 /**
  * @function register

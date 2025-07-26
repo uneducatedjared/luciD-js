@@ -72,13 +72,7 @@ class User extends Model {
       }
     }
   });
-}
-
-  static associate(models) {
-    // 定义模型关联（如需要）
-    // 例如: this.hasMany(models.Post);
-  }
-}
+}}
 
 User.init();
 
