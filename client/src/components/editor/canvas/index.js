@@ -1,201 +1,112 @@
-'use client';
+"use client"
+import { useEffect, useRef } from "react";
+import { initializeFabric, setBackgroundImage, customizeBoundingBox } from "@/fabric/fabric-utils";
+import { designStore} from "@/stores/designStore";
 
-import { useEffect, useRef, useCallback, forwardRef } from 'react';
-import { initializeFabric } from '@/fabric/fabric-utils'; // Assuming this correctly initializes Fabric.js and returns a canvas instance
-import { DesignStore } from '@/stores/designStore';
-import { Image as fabricImage } from 'fabric'
-/**
- * 中间画布区组件 (Fabric.js 相关的逻辑和渲染)
- * 功能：初始化 Fabric.js 画布，渲染 T 恤模型和用户上传的图片。
- * 支持图片拖拽、缩小/放大、旋转。
- * 状态： useRef 获取 canvas 元素；useEffect 初始化 Fabric.js 实例并监听对象变化;
- * 从 Zustand store 获取设计数据，并将画布状态更新回 Zustand
- */
-export default forwardRef(function CanvasArea(props, ref) {
-  const canvasRef = useRef(null); // canvas DOM container
-  const canvasContainerRef = useRef(null); // Parent container of the canvas
-  const fabricCanvasRef = useRef(null); // Stores the Fabric.js instance
-  const initAttemptedRef = useRef(false); // Prevents duplicate initialization
+export default function Canvas() {
+  const canvasRef = useRef(null); // 用来操作底层canvas组件
+  const canvasContainerRef = useRef(null); // 装载canvas的父组件
+  const fabricCanvasRef = useRef(null); // 存储fabric js 本身
+  const initAttemptedRef = useRef(false); // 检查画布是否被初始化过
+  const { setCanvas, markAsModified} = designStore();
 
-  // Destructure from Zustand store
-  const { tshirtColor, setCanvas, updateCanvasJson } = DesignStore(); // Assuming updateCanvasJson is a new action to store the canvas JSON
-  const addFabricObject = DesignStore((state) => state.addFabricObject);
-
-  // T-shirt base image path mapping
-  const tshirtImages = {
-    white: '/images/tshirt_base_white.png',
-    black: '/images/tshirt_base_black.png',
-    pink: '/images/tshirt_base_pink.png',
-  };
-
-  // --- Utility Functions ---
-
-  // Customizes Fabric.js bounding box controls (assuming this function is defined elsewhere)
-  // You'll need to define this function, e.g., in fabric-utils.js or directly here.
-  const customizeBoundingBox = useCallback((canvas) => {
-    if (!canvas) return;
-    // Example customization (replace with your actual logic)
-    // fabric.Object.prototype.set({
-    //   borderColor: '#3f51b5',
-    //   cornerColor: '#3f51b5',
-    //   cornerSize: 10,
-    //   transparentCorners: false,
-    // });
-    console.log('Fabric.js bounding box customization applied.');
-  }, []);
-
-  // Sets canvas dimensions to match the container
-  const resizeCanvas = useCallback(() => {
-    if (canvasContainerRef.current && fabricCanvasRef.current && fabricCanvasRef.current.lower) {
-      const container = canvasContainerRef.current;
-      const { width, height } = container.getBoundingClientRect();
-
-      fabricCanvasRef.current.setWidth(width);
-      fabricCanvasRef.current.setHeight(height);
-      fabricCanvasRef.current.renderAll();
-      console.log(`Canvas resized to: ${width}x${height}`);
-    }
-  }, []);
-
-  // Handles all canvas modification events and updates the store
-  const handleCanvasChange = useCallback((e) => {
-    console.log('Canvas changed:', e.type);
-    if (fabricCanvasRef.current) {
-      const canvasJson = fabricCanvasRef.current.toJSON();
-      updateCanvasJson(canvasJson); // Update the serialized JSON in the store
-      console.log('Canvas data serialized and updated in store:', canvasJson);
-
-      // Example: add new objects to the store based on event type
-      if (e.type === 'object:added') {
-        addFabricObject(e.target);
-      }
-      // You might also want to trigger a save or history update here
-    }
-  }, [addFabricObject, updateCanvasJson]); // Added updateCanvasJson to dependencies
-
-  // --- Effects ---
-
-  // Initialize Fabric.js canvas
+  // 和画布有关的useEffect
   useEffect(() => {
-    const initCanvas = async () => {
-      // Prevent re-initialization on re-renders
-      if (typeof window === 'undefined' || !canvasRef.current || initAttemptedRef.current) {
+    // 1. 定义画布清理函数，提示用户如果未登录设计数据可能被清理
+    const cleanUpCanvas = () => {
+      if (fabricCanvasRef.current) {
+        try {
+          fabricCanvasRef.current.off("object:added");
+          fabricCanvasRef.current.off("object:modified");
+          fabricCanvasRef.current.off("object:removed");
+          fabricCanvasRef.current.off("path:created");
+        } catch (e) {
+          console.error("Error remvoing event listeners", e);
+        }
+        try {
+          fabricCanvasRef.current.dispose();
+        } catch (e) {
+          console.error("Error disposing canvas", e);
+        }
+        fabricCanvasRef.current = null;
+        setCanvas(null);
+      }
+    };
+
+    // 初始化之前去除监听方法
+    cleanUpCanvas();
+    initAttemptedRef.current = false; // 准备初始化
+
+    // 开始初始化
+    const initcanvas = async() => {
+      // 确保在浏览器环境
+      if (
+        typeof window === "undefined" || // 修复：这里应该是字符串比较
+        !canvasRef.current ||
+        initAttemptedRef.current
+      ) {
         return;
       }
-
-      initAttemptedRef.current = true; // Mark initialization attempt
-
+      initAttemptedRef.current = true;
       try {
-        // Initialize Fabric.js canvas using the utility function
+        console.log("开始初始化Canvas...");
         const fabricCanvas = await initializeFabric(
           canvasRef.current,
           canvasContainerRef.current
         );
-
         if (!fabricCanvas) {
           console.error("Failed to initialize Fabric.js canvas");
-          initAttemptedRef.current = false; // Allow re-attempt if initialization failed
           return;
         }
-
         fabricCanvasRef.current = fabricCanvas;
-        setCanvas(fabricCanvas); // Store the Fabric.js instance in Zustand
-        console.log("Canvas initialized and instance set in store.");
+        setCanvas(fabricCanvas); // 初始化fabrics的数据
+        console.log("Canvas 初始化成功，尺寸:", fabricCanvas.width, "x", fabricCanvas.height);
 
-        // Expose Fabric.js instance to parent component via ref
-        if (ref) {
-          ref.current = fabricCanvasRef.current;
-          console.log('Canvas instance exposed via forwarded ref:', fabricCanvasRef.current);
-        } else {
-          console.warn('Forwarded ref not provided to CanvasArea. Cannot expose canvas instance.');
-        }
+        // 等待canvas完全准备好再设置背景
+        setTimeout(async () => {
+          try {
+            console.log("开始设置背景图片...");
+            await setBackgroundImage(fabricCanvas, 'white');
+            console.log("背景设置成功");
+            customizeBoundingBox(fabricCanvas);
+          } catch (error) {
+            console.error("设置背景图片时出错:", error);
+          }
+        }, 100);
 
-        // Apply custom styles for controls
-        customizeBoundingBox(fabricCanvas);
-
-        // Set up event listeners for canvas changes
+        //set up event listeners
+        const handleCanvasChange = () => {
+          markAsModified();
+        };
         fabricCanvas.on("object:added", handleCanvasChange);
         fabricCanvas.on("object:modified", handleCanvasChange);
         fabricCanvas.on("object:removed", handleCanvasChange);
         fabricCanvas.on("path:created", handleCanvasChange);
-        fabricCanvas.on("selection:updated", handleCanvasChange); // Good to track selection changes
-        fabricCanvas.on("selection:cleared", handleCanvasChange); // And cleared selections
-
-        // Initial resize
-        resizeCanvas();
-
-      } catch (e) {
-        console.error("Failed to initialize canvas:", e);
-        initAttemptedRef.current = false; // Allow re-attempt if initialization failed
+      } catch(e){
+        console.log("canvas 初始化失败", e);
       }
     };
-
-    initCanvas();
-
-    // Cleanup function for useEffect
-    return () => {
-      if (fabricCanvasRef.current) {
-        // Remove all event listeners to prevent memory leaks
-        fabricCanvasRef.current.off("object:added", handleCanvasChange);
-        fabricCanvasRef.current.off("object:modified", handleCanvasChange);
-        fabricCanvasRef.current.off("object:removed", handleCanvasChange);
-        fabricCanvasRef.current.off("path:created", handleCanvasChange);
-        fabricCanvasRef.current.off("selection:updated", handleCanvasChange);
-        fabricCanvasRef.current.off("selection:cleared", handleCanvasChange);
-
-        // Dispose of the Fabric.js canvas instance to free up resources
-        fabricCanvasRef.current.dispose();
-        console.log('Fabric.js canvas disposed on component unmount.');
-      }
-    };
-  }, [ref, customizeBoundingBox, handleCanvasChange, resizeCanvas, setCanvas]); // Dependencies for initCanvas
-
-  // Listen for window resize to adjust canvas dimensions
-  useEffect(() => {
-    const resizeObserver = new ResizeObserver(resizeCanvas);
-    if (canvasContainerRef.current) {
-      resizeObserver.observe(canvasContainerRef.current);
-    }
+    
+    // 稍微增加延迟确保DOM完全准备好
+    const timer = setTimeout(() => {
+      initcanvas();
+    }, 100);
 
     return () => {
-      resizeObserver.disconnect();
-      console.log('ResizeObserver disconnected.');
+      clearTimeout(timer);
+      cleanUpCanvas();
     };
-  }, [resizeCanvas]);
+  }, []) //仅在组件挂载时执行一次
 
-  // Listen for T-shirt color changes and update background image
-  useEffect(() => {
-    if (tshirtColor && fabricCanvasRef.current) {
-      const imagePath = tshirtImages[tshirtColor];
-      if (imagePath) {
-        fabricImage.fromURL(imagePath, (img) => {
-          if (!fabricCanvasRef.current) return;
-
-          // Scale image to fit canvas, maintaining aspect ratio
-          img.scaleToWidth(fabricCanvasRef.current.getWidth());
-          img.scaleToHeight(fabricCanvasRef.current.getHeight());
-
-          // Set as background image
-          fabricCanvasRef.current.setBackgroundImage(img, fabricCanvasRef.current.renderAll.bind(fabricCanvasRef.current), {
-            scaleX: fabricCanvasRef.current.width / img.width,
-            scaleY: fabricCanvasRef.current.height / img.height,
-            originX: 'left',
-            originY: 'top',
-          });
-          console.log(`T-shirt background updated to: ${imagePath}`);
-        }, { crossOrigin: 'anonymous' }); // Add crossOrigin for images loaded from different domains
-      }
-    }
-  }, [tshirtColor, tshirtImages]); // Dependencies for color change
-
-  // --- Render ---
-
-  return (
+    return (
     <div
-      className="my-element relative w-full h-full flex items-center justify-center bg-gray-200 rounded-xl shadow-inner overflow-hidden"
+      className="relative w-full h-[600px] overflow-auto flex items-center justify-center"
       ref={canvasContainerRef}
     >
-      <canvas ref={canvasRef} className="border border-gray-300 rounded-lg shadow-md"></canvas>
+      <canvas 
+        ref={canvasRef} 
+        style={{ border: '1px solid #ccc' }} // 添加边框便于调试
+      />
     </div>
-  );
-});
+    )
+}

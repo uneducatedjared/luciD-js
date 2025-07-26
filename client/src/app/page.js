@@ -3,12 +3,15 @@
 
 import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
+import { designStore } from '@/stores/designStore';
 
 const HomePage = () => {
   const router = useRouter();
-
+  const { initialize, setDesignId } = designStore();
   const handleStartDesign = () => {
+    initialize();
     const designId = uuidv4();
+    setDesignId(designId);
     router.push(`/editor/${designId}`);
   };
 
