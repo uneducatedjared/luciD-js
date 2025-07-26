@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { DesignStore } from '@/app/stores/designStore';
+import { DesignStore } from '@/stores/designStore';
 import { useRouter } from 'next/navigation';
-import { UserStore } from '@/app/stores/userStore';
+import { UserStore } from '@/stores/userStore';
 /**
  * 右侧属性区组件
  * 功能：显示 T 恤颜色选项（黑色、白色、暗红色）。

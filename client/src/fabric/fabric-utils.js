@@ -1,31 +1,3 @@
-// export const initializeFabric = async (canvasEl, containerEl) => {
-//   try {
-//     const { Canvas, FabricImage } = await import("fabric");
-
-//     const canvas = new Canvas(canvasEl, {
-//       preserveObjectStacking: true,
-//       isDrawingMode: false,
-//       renderOnAddRemove: true,
-//     });
-//     FabricImage.fromURL(
-//       "https://ts3.tc.mm.bing.net/th/id/OIP-C.fXqK6uxwqQ0f_NiTvFr_LAAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3",
-//       (img) => {
-//         img.set({
-//           left: 100,
-//           top: 100,
-//         });
-//         canvas.add(img);
-//       }
-//     );
-//     canvas.renderAll()
-//     return canvas;
-//   } catch (e) {
-//     console.error("Failed to load fabric", e);
-//     return null;
-//   }
-// };
-
-
 export const initializeFabric = async (canvasEl, containerEl) => {
   try {
     const { Canvas, PencilBrush } = await import("fabric");
@@ -49,6 +21,7 @@ export const initializeFabric = async (canvasEl, containerEl) => {
   }
 };
 
+
 export const centerCanvas = (canvas) => {
   if (!canvas || !canvas.wrapperEl) return;
 
@@ -62,6 +35,7 @@ export const centerCanvas = (canvas) => {
   canvasWrapper.style.left = "50%";
   canvasWrapper.style.transform = "translate(-50%, -50%)";
 };
+
 
 export const addImageToCanvas = async (canvas, imageUrl) => {
   if (!canvas) return null;

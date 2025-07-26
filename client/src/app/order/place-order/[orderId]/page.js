@@ -2,8 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useParams } from 'next/navigation';
-import { DesignStore } from '@/app/stores/designStore';
-import { UserStore } from '@/app/stores/userStore';
+import { DesignStore } from '@/stores/designStore';
+import { UserStore } from '@/stores/userStore';
 import fabric from 'fabric';
 import axios from 'axios';
 

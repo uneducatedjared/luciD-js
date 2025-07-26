@@ -1,15 +1,3 @@
-// 用来保存数据的一种方法
-// export async function saveDesign(designData, designId = null) {
-//   return fetchWithAuth(`/v1/designs`, {
-//     method: "POST",
-//     body: {
-//       ...designData,
-//       designId,
-//     },
-//   });
-// }
-
-
 export async function saveCanvasState(
   canvas,
   designId = null,
@@ -19,6 +7,7 @@ export async function saveCanvasState(
 
   try {
     const canvasData = canvas.toJSON(["id", "filters"]);
+
     const designData = {
       name: title,
       canvasData: JSON.stringify(canvasData),

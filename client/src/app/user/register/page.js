@@ -3,7 +3,7 @@
 // 只有一个password
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserStore } from '@/app/stores/userStore';
+import { UserStore } from '@/stores/userStore';
 import Link from 'next/link';
 
 export default function RegisterPage() {

@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useCallback, forwardRef } from 'react';
-import { initializeFabric } from '@/app/lib/fabric-utils'; // Assuming this correctly initializes Fabric.js and returns a canvas instance
-import { DesignStore } from '@/app/stores/designStore';
+import { initializeFabric } from '@/fabric/fabric-utils'; // Assuming this correctly initializes Fabric.js and returns a canvas instance
+import { DesignStore } from '@/stores/designStore';
 import { Image as fabricImage } from 'fabric'
 /**
  * 中间画布区组件 (Fabric.js 相关的逻辑和渲染)
@@ -46,7 +46,7 @@ export default forwardRef(function CanvasArea(props, ref) {
 
   // Sets canvas dimensions to match the container
   const resizeCanvas = useCallback(() => {
-    if (canvasContainerRef.current && fabricCanvasRef.current) {
+    if (canvasContainerRef.current && fabricCanvasRef.current && fabricCanvasRef.current.lower) {
       const container = canvasContainerRef.current;
       const { width, height } = container.getBoundingClientRect();
 
