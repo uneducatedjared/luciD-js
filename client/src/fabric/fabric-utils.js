@@ -64,59 +64,75 @@ export const setBackgroundImage = async (canvas, tshirtColor) => {
   console.log("尝试加载背景图片:", imageUrl);
   console.log("Canvas尺寸:", canvas.width, "x", canvas.height);
   
-  if (imageUrl){
+  if (imageUrl) {
     try {
-      const { Image: FabricImage } = await import("fabric");
-      console.log("Fabric Image 类已加载");
+      const { FabricImage } = await import("fabric");
       
-      return new Promise((resolve, reject) => {
-        console.log("开始调用 FabricImage.fromURL...");
+      // 创建图片对象并设置为背景
+      FabricImage.fromURL(imageUrl, {
+        crossOrigin: 'anonymous' // 如果需要跨域访问
+      }).then((img) => {
+        // 调整图片尺寸以适应canvas（保持宽高比）
+        const canvasAspect = canvas.width / canvas.height;
+        const imgAspect = img.width / img.height;
         
-        // 设置超时以避免无限等待
-        const timeout = setTimeout(() => {
-          console.error("图片加载超时");
-          reject(new Error("图片加载超时"));
-        }, 10000);
+        if (imgAspect > canvasAspect) {
+          // 图片更宽，以高度为准
+          img.scaleToHeight(canvas.height);
+        } else {
+          // 图片更高，以宽度为准
+          img.scaleToWidth(canvas.width);
+        }
         
-        FabricImage.fromURL(imageUrl, (img) => {
-          clearTimeout(timeout);
-          console.log("FabricImage.fromURL 回调被触发", img);
-          
-          if (img) {
-            console.log("图片加载成功，原始尺寸:", img.width, "x", img.height);
-            
-            // 计算缩放比例以适应canvas
-            const scaleX = canvas.width / img.width;
-            const scaleY = canvas.height / img.height;
-            const scale = Math.min(scaleX, scaleY); // 保持宽高比
-            
-            console.log("计算的缩放比例:", scale);
-            
-            canvas.setBackgroundImage(img, () => {
-              console.log("背景图片设置完成，正在渲染...");
-              canvas.renderAll();
-              resolve();
-            }, {
-              left: canvas.width / 2,
-              top: canvas.height / 2,
-              originX: 'center',
-              originY: 'center',
-              scaleX: scale,
-              scaleY: scale
-            });
-          } else {
-            console.error("图片加载失败: img对象为空");
-            reject(new Error("图片加载失败"));
-          }
-        }, (error) => {
-          // 添加错误回调
-          clearTimeout(timeout);
-          console.error("FabricImage.fromURL 加载出错:", error);
-          reject(error);
+        // 设置图片位置居中
+        img.set({
+          left: 0,
+          top: 0,
+          selectable: false, // 背景图片不可选择
+          evented: false,    // 背景图片不响应事件
         });
         
-        console.log("FabricImage.fromURL 调用完成，等待回调...");
+        // 方法1：作为背景图片设置（修复版本兼容性）
+        try {
+            // 如果setBackgroundImage不存在，使用backgroundImage属性
+            canvas.backgroundImage = img;
+            canvas.renderAll();
+            console.log("背景图片设置成功（使用backgroundImage属性）");
+
+        } catch (bgError) {
+          console.warn("方法1失败，使用方法2:", bgError);
+          // 方法2：作为普通对象添加到最底层（居中显示）
+          // 计算居中位置
+          const centerX = canvas.width / 2;
+          const centerY = canvas.height / 2;
+          
+          img.set({
+            left: centerX,
+            top: centerY,
+            originX: 'center',
+            originY: 'center',
+            selectable: false,
+            evented: false,
+          });
+          
+          canvas.add(img);
+          
+          // 使用moveTo代替sendToBack
+          if (typeof canvas.sendToBack === 'function') {
+            canvas.sendToBack(img);
+          } else {
+            // 手动移动到最底层
+            canvas.moveTo(img, 0);
+          }
+          
+          canvas.renderAll();
+          console.log("背景图片设置成功（作为底层对象）");
+        }
+        
+      }).catch((error) => {
+        console.error("加载图片失败:", error);
       });
+      
     } catch (e) {
       console.error("设置背景图片失败:", e);
       throw e;
