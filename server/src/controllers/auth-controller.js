@@ -3,13 +3,7 @@ import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
 import User from '../models/user.js'; // 导入 Sequelize 和用户模型
 
-/**
- * @function register
- * @description 处理用户注册请求。验证输入，检查用户是否已存在，加密密码，创建新用户，并生成JWT令牌。
- * @param {Object} req - Express 请求对象
- * @param {Object} res - Express 响应对象
- * @returns {Object} 注册成功消息、用户数据和JWT令牌，或错误消息
- */
+
 export const register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -126,10 +120,32 @@ export const login = async (req, res) => {
         username: user.username,
         email: user.email
       },
-      token
+      token: token
     });
   } catch (error) {
     console.error('登录错误:', error);
     res.status(500).json({ message: '服务器错误，登录失败' });
   }
 };
+
+
+export const verifyToken = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ message: '未授权，未提供令牌' });
+    }
+
+    // 验证令牌
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded) {
+      return res.status(401).json({ message: '无效的令牌' });
+    }
+
+    // 令牌有效
+    res.status(200).json({ message: '令牌有效' });
+  } catch (error) {
+    console.error('令牌验证错误:', error);
+    res.status(401).json({ message: '无效的令牌' });
+  }
+}

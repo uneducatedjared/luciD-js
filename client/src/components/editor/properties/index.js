@@ -1,15 +1,21 @@
+'use client';
 import { useState } from "react";
 import { Truck, Star, Minus, Plus, ShoppingCart } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { designStore } from "@/stores/designStore";
+import { userStore } from "@/stores/userStore";
 import { exportImageUrl } from '@/fabric/fabric-utils'
-function Properties() {
 
+function Properties() {
+  const router = useRouter();
   const { canvas, designId, tshirtColor, name, setTshirtColor } = designStore();
   const [selectedSize, setSelectedSize] = useState('M');
   const [selectedColor, setSelectedColor] = useState('white');
   const [quantity, setQuantity] = useState(1);
 
+  const [isLoading, setIsLoading] = useState(false); // 表示数据正在加载/订单正在提交，防止用户重复提交
+  const [error, setError] = useState(null); //存储错误信息
   // 可选尺码
   const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
   
@@ -34,13 +40,70 @@ function Properties() {
     }
   };
 
-  // 处理下单， 直接到数据库版本
-  const handleOrder = () => {
-    const orderData = {
-      size: selectedSize,
-      color: selectedColor,
-      quantity: quantity
-    };
+  // 处理下单，直接更改数据库，但在更新数据库之前需要验证用户是否登录，如果未登录，需要路由到登录页面
+  const handleOrder = async () => {
+    
+    // 验证用户是否登录，这里登录逻辑有问题，不过后面再改
+    const token = localStorage.getItem('token');
+    if (!token) {
+      // 保存当前路径，登录后可以返回
+      localStorage.setItem('redirectAfterLogin', window.location.pathname);
+      router.push('/user/login');
+      return;
+    }
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // 准备订单数据
+      const orderData = {
+        designId,
+        size: selectedSize,
+        color: selectedColor,
+        quantity: quantity,
+        userId: user.id, // 假设用户对象中有id
+        createdAt: new Date().toISOString()
+      };
+
+      // 如果有画布，导出设计图片
+      let designImageUrl = null;
+      if (canvas) {
+        designImageUrl = await exportImageUrl(canvas);
+        orderData.designImageUrl = designImageUrl;
+      }
+
+      // 发送订单数据到服务器
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}` // 假设用户对象中有token
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      if (!response.ok) {
+        throw new Error('创建订单失败');
+      }
+
+      const result = await response.json();
+      
+      // 订单创建成功后的处理
+      alert('订单创建成功！订单号：' + result.orderId);
+      
+      // 重置表单
+      setSelectedSize('M');
+      setSelectedColor('white');
+      setQuantity(1);
+      
+      // 跳转到订单详情页或订单列表页
+      router.push(`/orders/${result.orderId}`);
+    } catch (err) {
+      setError(err.message || '下单过程中发生错误');
+      console.error('下单错误:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

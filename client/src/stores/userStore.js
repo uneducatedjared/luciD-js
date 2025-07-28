@@ -1,34 +1,29 @@
-// client/app/stores/userStore.js
+'use client';
 import { create } from 'zustand';
 
-/**
- * 用户存储：管理用户认证信息。
- */
-export const UserStore = create((set, get) => ({
-  // 用户是否已登录
-  isLoggedIn: false,
-  // 用户信息对象
-  user: null, // { userId: string, username: string, email: string, userType: string }
+// 初始状态不尝试读取localStorage（避免服务器端错误）
+const initialState = { token: null };
 
-  /**
-   * 设置用户登录状态和用户信息
-   * @param {object} userData - 用户数据
-   */
-  login: (userData) => set({ isLoggedIn: true, user: userData }),
-
-  /**
-   * 清除用户登录状态
-   */
-  logout: () => set({ isLoggedIn: false, user: null }),
-
-  /**
-   * 检查用户是否已登录（模拟，实际应验证token）
-   * @returns {boolean}
-   */
-  checkAuth: () => {
-    // 实际应用中，这里会检查 localStorage/cookies 中的 token 并验证
-    // return !!localStorage.getItem('authToken');
-    return get().isLoggedIn; // 暂时直接返回当前状态
+export const userStore = create((set) => ({
+  ...initialState,
+  // 在登录/登出时才访问localStorage
+  login: (newToken) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('token', newToken);
+    }
+    set({ token: newToken });
   },
+  logout: () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+    }
+    set({ token: null });
+  },
+  // 添加一个初始化方法，在客户端挂载后调用
+  initialize: () => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      set({ token });
+    }
+  }
 }));
-

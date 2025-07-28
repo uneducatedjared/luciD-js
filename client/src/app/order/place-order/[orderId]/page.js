@@ -3,14 +3,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useParams } from 'next/navigation';
 import { DesignStore } from '@/stores/designStore';
-import { UserStore } from '@/stores/userStore';
+import { userStore } from '@/stores/userStore';
 import fabric from 'fabric';
 import axios from 'axios';
 
 export default function PlaceOrderPage() {
+  const { useAuth } = userStore;
   const { orderId } = useParams();
   const designStore = DesignStore();
-  const { user } = UserStore();
+  const { user } = useAuth(); // 统一使用 useAuth 钩子
   const [orderNumber, setOrderNumber] = useState('');
   const [previewImage, setPreviewImage] = useState('');
   const [formData, setFormData] = useState({

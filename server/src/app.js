@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import authRoutes from './routes/auth.routes.js';
+import authRoutes from './routes/auth-routes.js';
 
 // 加载环境变量
 dotenv.config();
