@@ -2,7 +2,7 @@
 import { debounce } from "lodash";
 import { create } from "zustand";
 import { saveDesign } from "@/services/design-service";
-import { centerCanvas } from "@/fabric/fabric-utils";
+import { centerCanvas, setBackgroundImage } from "@/fabric/fabric-utils";
 /**
  * 设计存储：管理 Fabric.js 画布的设计状态、T恤颜色、当前活动对象以及自动保存
  */
@@ -20,7 +20,13 @@ export const designStore = create((set, get) => ({
   setDesignId: (id) => set({ designId: id }),
 
   tshirtColor: 'white', // 'white', 'black', 'pink'
-  setTshirtColor: (color) => set({ tshirtColor: color }),
+  setTshirtColor: (color) =>{
+    set({ tshirtColor: color });
+    const canvas = get().canvas;
+  if (color && canvas) {
+  setBackgroundImage(canvas, color);
+}
+},
 
   isEditing: true,
   setIsEditing: (flag) => set({ isEditing: flag }),

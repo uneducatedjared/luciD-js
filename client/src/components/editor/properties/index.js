@@ -1,106 +1,138 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { DesignStore } from '@/stores/designStore';
-import { useRouter } from 'next/navigation';
-import { UserStore } from '@/stores/userStore';
-/**
- * 右侧属性区组件
- * 功能：显示 T 恤颜色选项（黑色、白色、暗红色）。
- * 提供下单按钮
- * 状态：使用 useState 管理当前选中的 T 恤颜色，并将该颜色更新到 Zustand design store 中。
- * CanvasArea.js 的 useEffect 监听 designStore.tshirtColor 的变化，并相应地更新加载的T恤底图。
- * 下单按钮点击后，触发导航到 /order/place-order 路由
- * @param {object} props - 组件属性
- * @param {string} props.designId - 当前设计ID
- */
-export default function PropertiesPanel({ designId }) {
-  const router = useRouter();
-  const { tshirtColor, setTshirtColor, canvas, saveDesign } = DesignStore();
-  /**
-   * 处理颜色选择
-   * @param {string} color - 选中的颜色
-   */
-  const handleColorChange = (color) => {
-    setTshirtColor(color);
-  };
+import { useState } from "react";
+import { Truck, Star, Minus, Plus, ShoppingCart } from "lucide-react";
+import { useEffect } from "react";
+import { designStore } from "@/stores/designStore";
+import { exportImageUrl } from '@/fabric/fabric-utils'
+function Properties() {
 
-  /**
-   * 处理下单操作
-   */
-  const { isLoggedIn } = UserStore();
+  const { canvas, designId, tshirtColor, name, setTshirtColor } = designStore();
+  const [selectedSize, setSelectedSize] = useState('M');
+  const [selectedColor, setSelectedColor] = useState('white');
+  const [quantity, setQuantity] = useState(1);
 
-  const handlePlaceOrder = async () => {
-    // 检查用户是否登录
-    if (!isLoggedIn) {
-      // 重定向到登录页面，并携带当前设计ID作为参数
-      router.push(`/user/login?redirect=/editor/${designId}`);
-      return;
-    }
-
-    if (!canvas) {
-      alert('请先设计您的T恤！');
-      return;
-    }
-    try {
-      // 1. 保存当前设计到后端（如果尚未保存或需要更新）
-      const saveSuccess = await saveDesign(); // 确保设计已保存
-      if (!saveSuccess) {
-        throw new Error('保存设计失败');
-      }
-
-      // 2. 使用uuid生成唯一订单ID
-      const orderId = uuidv4();
-
-      // 3. 导航到下单页面
-      router.push(`/order/place-order/${orderId}?designId=${designId}`);
-      
-    } catch (error) {
-      alert(`${error.message}，无法下单。请重试。`);
-      console.error('下单失败:', error);
-    }
-  };
-
+  // 可选尺码
+  const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
+  
+  // 可选颜色
   const colors = [
-    { name: '白色', value: 'white', hex: '#FFFFFF' },
-    { name: '黑色', value: 'black', hex: '#2C2C2C' },
-    { name: '粉色', value: 'pink', hex: '#FFC0CB' },
+    { name: 'black', label: '黑色', color: '#000000' },
+    { name: 'white', label: '白色', color: '#FFFFFF' },
+    { name: 'pink', label: '粉色', color: '#FF69B4' }
   ];
 
+  // 检测颜色变化，更换背景图片
+  useEffect(()=>{
+    setTshirtColor(selectedColor);
+  },[selectedColor])
+
+  // 处理数量变化
+  const handleQuantityChange = (type) => {
+    if (type === 'increase') {
+      setQuantity(prev => prev + 1);
+    } else if (type === 'decrease' && quantity > 1) {
+      setQuantity(prev => prev - 1);
+    }
+  };
+
+  // 处理下单， 直接到数据库版本
+  const handleOrder = () => {
+    const orderData = {
+      size: selectedSize,
+      color: selectedColor,
+      quantity: quantity
+    };
+  };
+
   return (
-    <div className="flex flex-col h-full space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">T恤属性</h2>
-      {/* 颜色选择 */}
-      <div className="flex flex-col space-y-3">
-        <label className="text-lg font-medium text-gray-700">选择T恤颜色:</label>
-        <div className="grid grid-cols-3 gap-4">
-          {colors.map((color) => (
-            <button
-              key={color.value}
-              onClick={() => handleColorChange(color.value)}
-              className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all duration-200
-                ${tshirtColor === color.value ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-gray-400'}
-              `}
-            >
-              <div
-                className="w-12 h-12 rounded-full border border-gray-300"
-                style={{ backgroundColor: color.hex }}
-              ></div>
-              <span className="mt-2 text-sm font-medium text-gray-800">{color.name}</span>
-            </button>
-          ))}
+    <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+      {/* 属性选择区域 */}
+      <div className="p-6 space-y-6">
+        {/* 尺码选择 */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">尺码:</h3>
+          <div className="flex gap-2 flex-wrap">
+            {sizes.map((size) => (
+              <button
+                key={size}
+                onClick={() => setSelectedSize(size)}
+                className={`px-4 py-2 border rounded-md text-sm font-medium transition-colors ${
+                  selectedSize === size
+                    ? 'border-teal-600 bg-teal-50 text-teal-700'
+                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 颜色选择 */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">
+            颜色: <span className="font-normal">{colors.find(c => c.name === selectedColor)?.label}</span>
+          </h3>
+          <div className="flex gap-3">
+            {colors.map((color) => (
+              <button
+                key={color.name}
+                onClick={() => setSelectedColor(color.name)}
+                className={`w-12 h-12 rounded-full border-2 transition-all ${
+                  selectedColor === color.name
+                    ? 'border-teal-600 ring-2 ring-teal-200'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+                style={{ backgroundColor: color.color }}
+                title={color.label}
+              >
+                {selectedColor === color.name && (
+                  <div className="w-full h-full rounded-full flex items-center justify-center">
+                    <div className={`w-4 h-4 rounded-full ${color.name === 'white' ? 'bg-teal-600' : 'bg-white'}`}></div>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 数量选择 */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-700 mb-3">数量:</h3>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center border border-gray-300 rounded-md">
+              <button
+                onClick={() => handleQuantityChange('decrease')}
+                disabled={quantity <= 1}
+                className="p-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+              <span className="px-4 py-2 min-w-[3rem] text-center font-medium">
+                {quantity}
+              </span>
+              <button
+                onClick={() => handleQuantityChange('increase')}
+                className="p-2 hover:bg-gray-100"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* 下单按钮 */}
-      <div className="mt-auto">
+      <div className="p-6 border-t border-gray-200">
         <button
-          onClick={handlePlaceOrder}
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-lg shadow-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75"
+          onClick={handleOrder}
+          className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-md transition-colors flex items-center justify-center gap-2"
         >
-          立即下单
+          <ShoppingCart className="w-5 h-5" />
+          下单
         </button>
       </div>
     </div>
   );
 }
+
+export default Properties;

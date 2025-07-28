@@ -220,3 +220,11 @@ export const customizeBoundingBox = (canvas) => {
     console.error("Failed to customise bounding box", e);
   }
 };
+
+export const exportImageUrl = (canvas) => {
+  if (!canvas) return null;
+  return canvas.toDataURL({
+    format: 'png',
+    quality: 1,
+  });
+}

@@ -3,6 +3,7 @@
 import Header from './header';
 import Sidebar from './sidebar'; 
 import Canvas from './canvas';
+import Properties from './properties';
 import { getDesignByID } from "@/services/design-service";
 import { designStore } from "@/stores/designStore";
 import { useParams} from "next/navigation";
@@ -127,6 +128,7 @@ export default function MainEditor() {
             <Canvas />
           </main>
         </div>
+        <Properties />
       </div>
     </div>
   );
