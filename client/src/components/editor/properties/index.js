@@ -9,6 +9,7 @@ import { exportImageUrl } from '@/fabric/fabric-utils'
 
 function Properties() {
   const router = useRouter();
+  const { token, userId } = userStore();
   const { canvas, designId, tshirtColor, name, setTshirtColor } = designStore();
   const [selectedSize, setSelectedSize] = useState('M');
   const [selectedColor, setSelectedColor] = useState('white');
@@ -45,39 +46,42 @@ function Properties() {
     
     // 验证用户是否登录，这里登录逻辑有问题，不过后面再改
     const token = localStorage.getItem('token');
+
     if (!token) {
       // 保存当前路径，登录后可以返回
       localStorage.setItem('redirectAfterLogin', window.location.pathname);
       router.push('/user/login');
       return;
     }
+
     try {
       setIsLoading(true);
       setError(null);
 
-      // 准备订单数据
-      const orderData = {
-        designId,
-        size: selectedSize,
-        color: selectedColor,
-        quantity: quantity,
-        userId: user.id, // 假设用户对象中有id
-        createdAt: new Date().toISOString()
-      };
 
       // 如果有画布，导出设计图片
       let designImageUrl = null;
       if (canvas) {
         designImageUrl = await exportImageUrl(canvas);
-        orderData.designImageUrl = designImageUrl;
       }
+        const orderData = {
+        designId,
+        user_id: userId,
+        original_design_id: designId,
+        design_data: canvas.toJSON(),
+        img_url: designImageUrl,
+        size: selectedSize,
+        color: selectedColor,
+        quantity: quantity,
+        createdAt: new Date().toISOString()
+      };
 
       // 发送订单数据到服务器
-      const response = await fetch('/api/orders', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}` // 假设用户对象中有token
+          'Authorization': `Bearer ${token}` 
         },
         body: JSON.stringify(orderData)
       });

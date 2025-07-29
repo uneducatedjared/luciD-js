@@ -33,21 +33,31 @@ export const getOrderByUserID = async (req, res) => {
 };
 
 // 更新/创建订单，orderId后台自动生成
-export const updateOrder = async (req, res) => {
+export const createOrUpdateOrder = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { user_id, ...orderData } = req.body;
 
-    // 检查是否存在用户ID（创建订单必需）
-    if (!user_id && !orderId) {
+    // 创建订单时必须有user_id，更新订单时必须有orderId
+    if (!orderId && !user_id) {
       return res.status(400).json({ error: '创建订单需要提供用户ID' });
     }
 
     // 处理创建或更新逻辑
     let order;
     if (orderId) {
-      // 更新现有订单
-      const [updatedCount, [updatedOrder]] = await Order.update(orderData, {
+      // 更新现有订单 - 只更新前端传来的非空字段
+      const updateFields = {};
+      
+      // 过滤掉undefined、null和空字符串的字段
+      Object.keys(orderData).forEach(key => {
+        const value = orderData[key];
+        if (value !== undefined && value !== null && value !== '') {
+          updateFields[key] = value;
+        }
+      });
+
+      const [updatedCount, [updatedOrder]] = await Order.update(updateFields, {
         where: { order_id: orderId },
         returning: true
       });
@@ -61,8 +71,7 @@ export const updateOrder = async (req, res) => {
       // 创建新订单（自动生成UUID）
       order = await Order.create({
         user_id,
-        ...orderData,
-        order_id: DataTypes.UUIDV4 // 依赖模型默认值
+        ...orderData
       });
     }
 
@@ -72,37 +81,30 @@ export const updateOrder = async (req, res) => {
   }
 };
 
-// 获取待生产订单
-export const getProductionOrders = async (req, res) => {
+// 获取未完成订单
+export const getUnfinishedOrders = async (req, res) => {
   try {
-    const orders = await Order.findAll({
-      where: { 
-        order_status: {
-          [Op.in]: ['待生产'] 
-        }
-      },
-      order: [['created_at', 'ASC']]
-    });
-    
-    res.json(orders);
-  } catch (error) {
-    res.status(500).json({ error: '获取待生产订单失败', details: error.message });
-  }
-};
+    const { status } = req.query;
+    let whereCondition;
+    let orderBy;
 
-export const getDeliveryOrders = async (req, res) => {
-  try {
+    if (status === '待生产') {
+      whereCondition = { order_status: { [Op.in]: ['待生产'] } };
+      orderBy = [['created_at', 'ASC']];
+    } else if (status === '待发货') {
+      whereCondition = { order_status: { [Op.in]: ['待发货'] } };
+      orderBy = [['estimated_delivery', 'ASC']];
+    } else {
+      return res.status(400).json({ error: '无效的订单状态参数' });
+    }
+
     const orders = await Order.findAll({
-      where: { 
-        order_status: {
-          [Op.in]: ['待发货'] 
-        }
-      },
-      order: [['estimated_delivery', 'ASC']]
+      where: whereCondition,
+      order: orderBy
     });
-    
+
     res.json(orders);
   } catch (error) {
-    res.status(500).json({ error: '获取待发货订单失败', details: error.message });
+    res.status(500).json({ error: '获取未完成订单失败', details: error.message });
   }
-};
+};  

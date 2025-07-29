@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import { register, login } from '../controllers/auth-controller.js';
+import { register, login, verifyToken } from '../controllers/auth-controller.js';
 import { validateRegister } from '../validators/auth-validator.js';
 
 

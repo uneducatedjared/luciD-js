@@ -35,6 +35,11 @@ class Order extends Model {
         allowNull: false,
         comment: '商品尺寸规格'
       },
+      tshirt_color: {
+        type: DataTypes.STRING(50), // 颜色名称（如“黑色”“白色”）
+        allowNull: false,
+        comment: 'T恤颜色（如黑色、白色、红色等，或色值代码）'
+      },
       quantity: {
         type: DataTypes.INTEGER,
         allowNull: false,
